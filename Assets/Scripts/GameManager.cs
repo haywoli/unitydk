@@ -3,66 +3,61 @@ using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
+    public static GameManager Instance { get; private set; }
+
     private int level;
     private int lives;
     private int score;
 
-    private void Start()
+    private void Awake()
     {
-        DontDestroyOnLoad(gameObject);
-        NewGame();
-    }
-
-    private void NewGame()
-    {
-        lives = 3;
-        score = 0;
-
-        LoadLevel(1);
-    }
-
-    private void LoadLevel(int index)
-    {
-        level = index;
-
-        Camera camera = Camera.main;
-
-        if (camera != null) {
-            camera.cullingMask = 0;
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
         }
 
-        Invoke(nameof(LoadScene), 1f);
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
-    private void LoadScene()
+    public void NewGame()
     {
-        SceneManager.LoadScene(level);
+        lives = 1;
+        score = 0;
+        LoadLevel("Level1");
     }
-    
+
+    private void LoadLevel(string sceneName)
+    {
+        SceneManager.LoadScene(sceneName);
+    }
+
     public void LevelComplete()
     {
         score += 1000;
 
-        int nextLevel = level + 1;
-        if (nextLevel < SceneManager.sceneCountInBuildSettings) {
-            LoadLevel(nextLevel);
-        } else {
-            LoadLevel(1);
+        if (SceneManager.GetActiveScene().name == "Level2")
+        {
+            SceneManager.LoadScene("Win");
+        }
+        else
+        {
+            LoadLevel("Level2"); // Go to next level
         }
     }
-    
+
     public void LevelFailed()
     {
-        lives --;
+        lives--;
 
-        if (lives <= 0) {
-            NewGame();
-            } else {
-               LoadLevel(level);
-            }        
-            }
-
-
+        if (lives <= 0)
+        {
+            SceneManager.LoadScene("GameOver");
+        }
+        else
+        {
+            LoadLevel(SceneManager.GetActiveScene().name); // Restart current level
+        }
     }
-
-
+}

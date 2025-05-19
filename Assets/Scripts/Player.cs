@@ -16,13 +16,22 @@ public class Player : MonoBehaviour
     private Vector2 direction;
 
     public float moveSpeed = 1f;
-    public float jumpStrength =1f;
-    
+    public float jumpStrength = 1f;
+
     private bool grounded;
     private bool climbing;
 
+    void Start()
+    {
+        if (GameManager.Instance == null)
+        {
+            GameObject gm = new GameObject("GameManager");
+            gm.AddComponent<GameManager>();
+            Debug.Log("GameManager created at runtime by Player.");
+        }
+    }
     private void Awake()
-    {   
+    {
         spriteRenderer = GetComponent<SpriteRenderer>();
         rigidbody = GetComponent<Rigidbody2D>();
         collider = GetComponent<Collider2D>();
@@ -31,16 +40,16 @@ public class Player : MonoBehaviour
 
     private void OnEnable()
     {
-        InvokeRepeating(nameof(AnimateSprite), 1f/12f, 1f/12f); //calls every 12th of a second, repeating every 12th of a second
-    }
-    
-    private void OnDisable()  
-    {
-        CancelInvoke(); //stops him animating
-    
+        InvokeRepeating(nameof(AnimateSprite), 1f / 12f, 1f / 12f); //calls every 12th of a second, repeating every 12th of a second
     }
 
-    private void CheckCollision() 
+    private void OnDisable()
+    {
+        CancelInvoke(); //stops him animating
+
+    }
+
+    private void CheckCollision()
     {
         grounded = false;
         climbing = false;
@@ -49,44 +58,54 @@ public class Player : MonoBehaviour
         size.y += 0.1f;
         size.x /= 2f;
 
-       int amount = Physics2D.OverlapBoxNonAlloc(transform.position, size, 0f, results);
-       
-       for (int i = 0; i < amount; i++)
-       {
+        int amount = Physics2D.OverlapBoxNonAlloc(transform.position, size, 0f, results);
+
+        for (int i = 0; i < amount; i++)
+        {
             GameObject hit = results[i].gameObject;
 
-            if (hit.layer == LayerMask.NameToLayer("Ground")) {
+            if (hit.layer == LayerMask.NameToLayer("Ground"))
+            {
                 grounded = hit.transform.position.y < (transform.position.y - 0.5f); //just to solve the issue if marios head hits the roof and the game assumes he is grounded 
-            
+
                 Physics2D.IgnoreCollision(collider, results[i], !grounded);
             }
             else if (hit.layer == LayerMask.NameToLayer("Ladder"))
             {
                 climbing = true;
             }
-       }
+        }
     }
 
     private void Update()
     {
-         CheckCollision();
+        CheckCollision();
 
-        if (climbing) { 
+        if (climbing)
+        {
             direction.y = Input.GetAxis("Vertical") * moveSpeed;
-        } else if (grounded && Input.GetButtonDown("Jump")) {
+        }
+        else if (grounded && Input.GetButtonDown("Jump"))
+        {
             direction = Vector2.up * jumpStrength;
-        } else {
+        }
+        else
+        {
             direction += Physics2D.gravity * Time.deltaTime;
         }
 
         direction.x = Input.GetAxis("Horizontal") * moveSpeed;
 
-        if (grounded) {
+        if (grounded)
+        {
             direction.y = Mathf.Max(direction.y, -1f);
         }
-        if (direction.x > 0f) {
+        if (direction.x > 0f)
+        {
             transform.eulerAngles = Vector3.zero;
-        } else if (direction.x < 0f) {
+        }
+        else if (direction.x < 0f)
+        {
             transform.eulerAngles = new Vector3(0f, 180f, 0f);
         }
     }
@@ -106,25 +125,44 @@ public class Player : MonoBehaviour
         {
             spriteIndex++; //cycling through the array of animations
 
-            if (spriteIndex >= runSprites.Length) { 
+            if (spriteIndex >= runSprites.Length)
+            {
                 spriteIndex = 0;
             }
             spriteRenderer.sprite = runSprites[spriteIndex];
         }
     }
 
-  private void OnCollisionEnter2D(Collision2D collision)
-  {
-    if (collision.gameObject.CompareTag("Objective"))
-    {   
-        enabled = false;
-        FindObjectOfType<GameManager>().LevelComplete();
-    }
-    
-    else if (collision.gameObject.CompareTag("Obstacle"))
+    private void OnCollisionEnter2D(Collision2D collision)
     {
-        enabled = false;
-        FindObjectOfType<GameManager>().LevelFailed();
+        if (collision.gameObject.CompareTag("Obstacle"))
+        {
+            enabled = false;
+
+            GameManager gm = FindObjectOfType<GameManager>();
+            if (gm != null)
+            {
+                gm.LevelFailed();
+            }
+            else
+            {
+                Debug.LogError("GameManager not found when player hit obstacle.");
+            }
+        }
+
+        if (collision.gameObject.CompareTag("Objective"))
+        {
+            enabled = false;
+
+            GameManager gm = FindObjectOfType<GameManager>();
+            if (gm != null)
+            {
+                gm.LevelComplete();
+            }
+            else
+            {
+                Debug.LogError("GameManager not found when player hit objective.");
+            }
+        }
     }
-}
 }
